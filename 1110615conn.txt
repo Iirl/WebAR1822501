@@ -1,0 +1,617 @@
+CREATE DATABASE test
+DROP DATABASE test
+USE test
+
+chap 17
+
+///using System.Data.SqlClient;
+
+===========================
+Data Source=.\sqlexpress\SQLSERVER2014;Initial Catalog=mydb;Integrated Security=True
+Data Source=.\sqlexpress\SQLSERVER2014;Initial Catalog=mydb;Persist Security Info=True;User ID=sa;Password=1qaz@wsx
+
+Data Source=.;Initial Catalog=mydb;Integrated Security=True
+
+////////connection string   連線字串
+///1.
+
+    SqlConnection cn = new SqlConnection();
+
+   private void Form_Load(object sender, EventArgs e)
+        {
+          
+// 設定連接字串，用來連接資料庫
+            //cn.ConnectionString = "Data Source=c409-th\\sqlexpress;Initial Catalog=mydb;Integrated Security=True";
+               cn.ConnectionString = "Data Source=.\\sqlexpress;Initial Catalog=mydb;Integrated Security=True";                                                                  
+            //  cn.ConnectionString = "Data Source=localhost\\sqlexpress;Initial Catalog=mydb;Integrated Security=True";
+            //  cn.ConnectionString = "Data Source=192.169.69.100;Initial Catalog=mydb;Integrated Security=True";
+             // cn.ConnectionString = "Data Source=127.0.0.1;Initial Catalog=mydb;Persist Security Info=True;User ID=sa;pwd=1qaz@wsx";
+            ShowConnection();  // 呼叫ShowConnection方法
+        }
+
+//           .=localhost=127.0.0.1=.\sqlexpress=192.169.69.39    //  .=小數點
+
+ private void ShowConnection()
+        {
+            label1.Text = "連接字串：" + cn.ConnectionString + Environment.NewLine;
+            label1.Text += "逾時秒數：" + cn.ConnectionTimeout + Environment.NewLine;
+            label1.Text += "　資料庫：" + cn.Database     + "\n";
+            label1.Text += "資料來源：" + cn.DataSource + "\n";
+        }
+
+    private void Button1_Click(object sender, EventArgs e)
+        {
+            // 判斷目前是否為資料庫關閉連接狀態
+            if (cn.State == ConnectionState.Closed) 
+            {
+                cn.Open();
+                button1.Text = "關閉";
+                label2.Text += "目前狀態：資料庫已連接" + Environment.NewLine;
+            }
+                // 判斷目前是否為資料庫開啟連接狀態
+            else if (cn.State == ConnectionState.Open) 
+            {
+                cn.Close();
+               button1.Text = "開啟";
+               label2.Text += "目前狀態：資料庫已關閉" + Environment.NewLine;
+            }
+            ShowConnection();
+        }
+
+//作業: 使用 richTextBox 來記錄資料庫的開關狀態
+
+///////////////////
+//17-11
+///2.   using   to avoid cn.close()
+
+  private void Form1_Load(object sender, EventArgs e)
+        {
+           using (SqlConnection cn = new SqlConnection())
+            {
+                cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+
+                cn.Open();
+                if (cn.State == ConnectionState.Open)
+                {
+                    MessageBox.Show("資料庫已連接", "目前狀態");
+                }
+            }           
+        }
+
+//課本使用using (SqlConnection cn = new SqlConnection())  
+// cn 是區域變數
+//優點 : db 會自動close()
+//缺點:  cn不能共用  適合小程式
+//老師不採用using
+//老師採用自行控制 db 的open() close() 比較有自主彈性 
+
+
+///////////////////
+///3.    app.config    //把連線字串, 寫到設定檔
+//設定步驟如下:
+    (1)先複製標準連線設定後, mydbConnectionString有紅色毛毛蟲(還沒有設定)
+    (2)專案名稱按右鍵|屬性|設定  
+    (3)輸入連線字串名稱 mydbConnectionString
+    (4)類型 選取: 連線字串
+    (5)值: 使用精靈去抓 連線字串
+    (6)觀察紅色毛毛蟲會消失
+//這種寫法適合熟練的人 , 到公司上班才使用(萬一考連線字串,會寫不出來)
+
+      using System.Data.SqlClient;
+
+       SqlConnection cn = new SqlConnection();
+        private void Form1_Load(object sender, EventArgs e)
+        {         
+                cn.ConnectionString =Properties.Settings.Default.mydbConnectionString;     //屬性.設定.預設.連線字串
+                cn.Open();
+                MessageBox.Show("連接資料庫：" + cn.Database, "Form1狀態");
+                cn.Close();           
+        }
+
+//下列寫法也可以
+ private void Form1_Load(object sender, EventArgs e)
+        {
+            using (SqlConnection cn = new SqlConnection(Properties.Settings.Default.mydbConnectionString))
+            {
+                cn.Open();
+                MessageBox.Show("連接資料庫：" + cn.Database, "Form1狀態");
+            }
+        } 
+
+//app.config 參考範例
+
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+    <configSections>
+    </configSections>
+    <connectionStrings>
+        <add name="WindowsFormsApplication1.Properties.Settings.mydbConnectionString"
+            connectionString="Data Source=.\sqlexpress\SQLSERVER2014;Initial Catalog=mydb;Integrated Security=True"
+            providerName="System.Data.SqlClient" />
+    </connectionStrings>
+    <startup> 
+        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.5" />
+    </startup>
+</configuration>
+
+//17-17
+////////DataReader1
+
+ SqlConnection cn = new SqlConnection();
+
+ private void Form1_Load(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+            cn.Open();
+            
+           string ss = "SELECT * FROM dept";                            //ss= sql string
+           SqlCommand cmd = new SqlCommand(ss, cn);     //這三句是模範寫法 
+           SqlDataReader dr = cmd.ExecuteReader();
+
+            // 上3句的另一種分解寫法
+           // string ss = "SELECT * FROM dept";           //ss= sql string
+            //SqlCommand cmd;          
+           // cmd = new SqlCommand(ss, cn);         
+            //SqlDataReader dr;
+           // dr = cmd.ExecuteReader();
+
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+
+            while (dr.Read())  // 一次讀一筆資料
+            {
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    richTextBox1.Text += dr[i].ToString() + "\t";
+                }
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+ 
+
+
+////////DataReader2
+// chap 17-21
+SqlConnection cn = new SqlConnection();
+ private void Form1_Load(object sender, EventArgs e)
+        {
+         
+           cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+           cn.Open();
+
+           string ss = "SELECT * FROM dept";                            //ss= sql string
+           SqlCommand cmd = new SqlCommand(ss, cn);     //這三句是模範寫法 
+           SqlDataReader dr = cmd.ExecuteReader();
+
+            //也可以這樣寫
+            //string ss = "SELECT * FROM dept";
+            //SqlCommand cmd = new SqlCommand();
+            //cmd.CommandText = ss;
+            //cmd.Connection = cn;
+           //SqlDataReader dr = cmd.ExecuteReader();   
+
+        
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())  // 一次讀一筆資料
+            {
+                richTextBox1.Text += dr["dno"].ToString() + "\t";         //輸出指定的欄位
+                richTextBox1.Text += dr["dname"].ToString() + "\t";
+                richTextBox1.Text += dr["loc"].ToString() + "\t";
+
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+            }
+
+////////DataReader2.1
+// 把顯示的欄位名稱改成中文
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        SqlConnection cn = new SqlConnection();
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+            cn.Open();
+
+            string ss="SELECT dno 部門編號,dname 部門名稱,loc 位置 FROM dept";
+            SqlCommand cmd = new SqlCommand(ss, cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+
+
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+
+            while (dr.Read())     // 一次讀一筆資料
+            {
+                richTextBox1.Text += dr["部門編號"].ToString() + "\t";
+                richTextBox1.Text += dr["部門名稱"].ToString() + "\t";
+                richTextBox1.Text += dr["位置"].ToString() + "\t";
+
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+    }
+}
+
+
+//作業: 將下例emp中的欄位名稱改成中文顯示
+// SELECT * FROM emp
+   private void button1_Click(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+            cn.Open();
+            SqlCommand cmd = new SqlCommand("SELECT * FROM emp", cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+               richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+          richTextBox1.Text += dr["eno"].ToString() + "\t";
+                richTextBox1.Text += dr["ename"].ToString() + "\t";     	 //員工姓名
+                richTextBox1.Text += dr["sex"].ToString() + "\t";		//性別
+                richTextBox1.Text += dr["job"].ToString() + "\t";		//職稱
+                richTextBox1.Text += dr["mgr"].ToString() + "\t";    		//manager經理
+                richTextBox1.Text += dr["hiredate"].ToString() + "\t";	//雇用日期
+                richTextBox1.Text += dr["sal"].ToString() + "\t";         		//salary薪資
+                richTextBox1.Text += dr["comm"].ToString() + "\t";   	//commission傭金
+                richTextBox1.Text += dr["dno"].ToString() + "\t";		//部門編號
+             
+
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+     
+
+//chap 17-25
+//////////DataReader 4.1   提升效率的寫法
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        SqlConnection cn = new SqlConnection();
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+            cn.Open();
+            SqlCommand cmd = new SqlCommand("SELECT * FROM dept", cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+                richTextBox1.Text += dr.GetInt32(0).ToString() + "\t";   //讀取dno
+                richTextBox1.Text += dr.GetString(1) + "\t";   //讀取dname
+                richTextBox1.Text += dr.GetString(2) + "\t";   //讀取loc
+
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();          
+        }
+    }
+}
+
+///上例最大缺點:欄位名稱的可讀性不高, 日後維護困難
+
+//////////DataReader 4.2   提升效率 兼顧 欄位可讀性的改良寫法
+//CHAP 17-25
+
+      SqlConnection cn = new SqlConnection();
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+            cn.Open();
+            SqlCommand cmd = new SqlCommand("SELECT * FROM dept", cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+                richTextBox1.Text += dr.GetSqlInt32(dr.GetOrdinal("dno")).ToString() + "\t";           //讀取dno
+                richTextBox1.Text += dr.GetSqlString( dr.GetOrdinal("dname")).ToString() + "\t";   //讀取dname
+                richTextBox1.Text += dr.GetSqlString(dr.GetOrdinal("loc")).ToString() + "\t";           //讀取loc
+
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+    }
+
+
+
+
+//////DataReader4.3  運算數值欄位dno *4
+   SqlConnection cn = new SqlConnection();
+   private void Form1_Load(object sender, EventArgs e)
+        {
+          
+               cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+                cn.Open();
+                SqlCommand cmd = new SqlCommand("SELECT * FROM dept", cn);
+                SqlDataReader dr = cmd.ExecuteReader();
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    richTextBox1.Text += dr.GetName(i) + "\t";
+                }
+                richTextBox1.Text += "\r\n" + "\r\n";
+                int n;
+                while (dr.Read())
+                {
+                    richTextBox1.Text +=  dr.GetInt32(0) .ToString() + "\t";   //讀取dno
+
+                    n = dr.GetInt32(0) * 4;                  
+                    richTextBox1.Text += n.ToString() + "\t";   //讀取dno *4
+
+                    richTextBox1.Text += dr.GetString(1) + "\t";   //讀取dname
+                    richTextBox1.Text += dr.GetString(2) + "\t";   //讀取loc
+
+                    richTextBox1.Text += "\r\n";
+                }
+               cn.Close();
+        }
+
+
+//DataReader 是快速順向讀取器, 讀取資料不能回頭
+//適合列印報表
+//如果資料需要[反覆運用],需要改道
+//由DataReader  --> richTextBox1.Text
+//改道DataReader  --> DataTable  --> DataGridView/ ListView
+//這個改道是王道
+// DataTable在資料結構的地位是"王者之劍"
+
+
+
+/////////SQL SHELL
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        SqlConnection cn = new SqlConnection();
+        private void button1_Click(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+
+            cn.Open();
+            string ss = textBox1.Text.Trim();
+            SqlCommand cmd = new SqlCommand(ss, cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+            richTextBox1.Clear();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+                richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    richTextBox1.Text += dr[i].ToString() + "\t";
+                }
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+    }
+}
+    
+/////////conn  ACCESS
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+// using System.Data.SqlClient;
+using System.Data.OleDb;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        OleDbConnection cn = new OleDbConnection();
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+  //        cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+             cn.ConnectionString = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=E:\\db1.mdb";
+
+            cn.Open();
+            OleDbCommand cmd = new OleDbCommand(textBox1.Text.Trim(), cn);
+            OleDbDataReader dr = cmd.ExecuteReader();
+            richTextBox1.Clear();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+            richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    richTextBox1.Text += dr[i].ToString() + "\t";
+                }
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+    }
+}
+
+注意: C# 存取不同的資料庫  會使用不同的資料庫物件  例如:
+using System.Data.SqlClient;    //SQL Server
+using System.Data.OleDb;        // ACCESS
+
+1. SQL Server : SqlConnection , SqlCommand ,  SqlDataReader
+2. ACCESS      : OleDbConnection , OleDbCommand ,  OleDbDataReader
+
+//作業:
+//表單上布置2個richTextBox
+//richTextBox1顯示來自SQL Server 的 dept
+//richTextBox2顯示來自Access         的 dept
+
+
+/////////////////SQL  SHELL   -  DML   (Data Manipulation Language:  INSERT , UPDATE , DELETE )
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        SqlConnection cn = new SqlConnection();
+
+        //以下執行  SELECT (QUERY),       cmd.ExecuteReader();
+        private void button1_Click(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+
+            cn.Open();
+            SqlCommand cmd = new SqlCommand(textBox1.Text.Trim(), cn);
+            SqlDataReader dr = cmd.ExecuteReader();
+            richTextBox1.Clear();
+            for (int i = 0; i < dr.FieldCount; i++)
+            {
+            richTextBox1.Text += dr.GetName(i) + "\t";
+            }
+            richTextBox1.Text += "\r\n" + "\r\n";
+            while (dr.Read())
+            {
+                for (int i = 0; i < dr.FieldCount; i++)
+                {
+                    richTextBox1.Text += dr[i].ToString() + "\t";
+                }
+                richTextBox1.Text += "\r\n";
+            }
+            cn.Close();
+        }
+//以上執行 Select  , cmd.ExecuteReader();
+//------------------------------------------------------------------------
+//18-17~18 , 18-22
+//以下執行 Insert Update Delete (DML),       cmd.ExecuteNonQuery();
+        private void button2_Click(object sender, EventArgs e)
+        {
+            cn.ConnectionString = "Data Source=.;Initial Catalog=mydb;Integrated Security=True";
+
+            cn.Open();
+            SqlCommand cmd = new SqlCommand(textBox2.Text.Trim(), cn);
+            //上句也可以這樣寫
+            //string sqlstr = "Insert into dept values (1234,'陳美麗','台北')";
+            //SqlCommand cmd = new SqlCommand();
+            //cmd.CommandText = sqlstr;
+            //cmd.Connection = cn;
+            cmd.ExecuteNonQuery();
+ 
+            MessageBox.Show("Updated");
+            cn.Close();
+        }
+    }
+}
+
+//老師現場檢查點:對dno= 1234  做SQL指令
+// 1. 新增(INSERT):  新增 1234, 陳美麗, 台北
+// 2. 更新(UPDATE): 更新 loc=新竹  
+// 3. 刪除(DELETE):  刪除dno=1234
+//面試會考: SQL的 INSERT  UPDATE  DELETE  SELECT 敘述寫法
+
+解答:
+select  *  from dept;
+insert into  dept  VALUES (1234,'陳美麗','台北' );
+update dept set loc='新竹'  where dno=1234;
+delete from dept  where dno=1234;
+
+
+// 作業:
+// 仿上例, 使用自己的專案作品資料表, 示範查詢, 新增, 更正, 刪除
+
+
+

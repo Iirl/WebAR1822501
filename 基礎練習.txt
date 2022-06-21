@@ -1,0 +1,33 @@
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("床前明月光"+"\n"+"疑似地上霜 " +"\n" + "舉頭望明月" + "\n" + "低頭思故鄉 ");
+        }
+
+///////////////////////////////////////////////////////////////////////////////////////
+       private void button2_Click(object sender, EventArgs e)
+        {
+            f0();  f1();    f2();
+        }
+
+        void f0()
+        {
+            ;
+        }
+        void f1()
+        {
+            MessageBox.Show("This is f1");
+        }
+
+        void f2()
+        {
+            MessageBox.Show("This is f2");
+        }
+
+////////////////////////////////////////////////////////////////////////////////////
+ private void button3_Click(object sender, EventArgs e)
+        {
+            richTextBox1.Text += textBox1.Text+"\n";
+            textBox1.Text = "";
+            textBox1.Focus();
+        }
